@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Friend, Post, User, WebSession } from "./app";
+import { Friend, Note, Link, Post, User, WebSession } from "./app";
 import { PostDoc, PostOptions } from "./concepts/post";
 import { UserDoc } from "./concepts/user";
 import { WebSessionDoc } from "./concepts/websession";
@@ -135,6 +135,24 @@ class Routes {
     const user = WebSession.getUser(session);
     const fromId = (await User.getUserByUsername(from))._id;
     return await Friend.rejectRequest(fromId, user);
+  }
+
+  @Router.get("/notes")
+  async getNotes(session: WebSessionDoc, postId: ObjectId) {
+    const user = WebSession.getUser(session);
+    return await Note.read(user, postId);
+  }
+
+  @Router.post("/notes")
+  async createNote(session: WebSessionDoc, label: string, postId: ObjectId) {
+    const user = WebSession.getUser(session);
+    return await Note.create(user, label, postId);
+  }
+
+  @Router.post("/links")
+  async createLink(session: WebSessionDoc, url: string, displayText: string, postId: ObjectId) {
+    const user = WebSession.getUser(session);
+    return await Link.create(user, url, displayText, postId);
   }
 }
 

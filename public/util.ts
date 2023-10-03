@@ -77,6 +77,24 @@ const operations: operation[] = [
     method: "DELETE",
     fields: { id: "input" },
   },
+  {
+    name: "Create Note",
+    endpoint: "/api/notes/",
+    method: "POST",
+    fields: { note: "input", postId: "input" },
+  },
+  {
+    name: "Get Notes (empty for all)",
+    endpoint: "/api/notes",
+    method: "GET",
+    fields: { postID: "input" },
+  },
+  {
+    name: "Create Link",
+    endpoint: "/api/links/",
+    method: "POST",
+    fields: { url: "input", displayText: "input", postId: "input" },
+  }
 ];
 
 // Do not edit below here.
