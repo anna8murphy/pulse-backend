@@ -2,13 +2,15 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Friend, Note, Link, Post, User, WebSession } from "./app";
+import { Friend, Link, Note, Post, User, WebSession } from "./app";
 import { PostDoc, PostOptions } from "./concepts/post";
 import { UserDoc } from "./concepts/user";
 import { WebSessionDoc } from "./concepts/websession";
 import Responses from "./responses";
 
 class Routes {
+
+  // USERS & SESSION
   @Router.get("/session")
   async getSessionUser(session: WebSessionDoc) {
     const user = WebSession.getUser(session);
@@ -57,6 +59,7 @@ class Routes {
     return { msg: "Logged out!" };
   }
 
+  // POSTS
   @Router.get("/posts")
   async getPosts(author?: string) {
     let posts;
@@ -90,6 +93,7 @@ class Routes {
     return Post.delete(_id);
   }
 
+  // FRIENDS
   @Router.get("/friends")
   async getFriends(session: WebSessionDoc) {
     const user = WebSession.getUser(session);
@@ -137,6 +141,7 @@ class Routes {
     return await Friend.rejectRequest(fromId, user);
   }
 
+  // NOTES
   @Router.get("/notes")
   async getNotes(session: WebSessionDoc, postId: ObjectId) {
     const user = WebSession.getUser(session);
@@ -149,10 +154,37 @@ class Routes {
     return await Note.create(user, label, postId);
   }
 
+  // LINKS
   @Router.post("/links")
   async createLink(session: WebSessionDoc, url: string, displayText: string, postId: ObjectId) {
     const user = WebSession.getUser(session);
     return await Link.create(user, url, displayText, postId);
+  }
+
+  // GROUPS
+  @Router.post("/groups")
+  async createGroup(session: WebSessionDoc, name: string, admin: string) {
+    return
+  }
+
+  @Router.get("/groups")
+  async getGroups(session: WebSessionDoc) {
+    return
+  }
+
+  @Router.delete("/groups")
+  async deleteGroup(session: WebSessionDoc, name: string) {
+    return
+  }
+
+  @Router.patch("/groups")
+  async addMember(session: WebSessionDoc, name: string, member: string) {
+    return
+  }
+
+  @Router.delete("/groups")
+  async deleteMember(session: WebSessionDoc, name: string, member: string) {
+    return
   }
 }
 
