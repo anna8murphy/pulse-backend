@@ -47,3 +47,5 @@ export default class LinkConcept {
       super("{0} is not the creator of link {1}!", creator, _id);
     }
   }
+
+  // Source: 6.1040 rec 4

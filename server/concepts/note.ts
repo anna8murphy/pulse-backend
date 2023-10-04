@@ -46,3 +46,5 @@ export default class NoteConcept {
       super("{0} is not the creator of note {1}!", creator, _id);
     }
   }
+
+  // Source: 6.1040 rec 4
