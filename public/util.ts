@@ -94,7 +94,38 @@ const operations: operation[] = [
     endpoint: "/api/links/",
     method: "POST",
     fields: { url: "input", displayText: "input", postId: "input" },
+  },
+  {
+    name: "Create Group",
+    endpoint: "/api/groups/",
+    method: "POST",
+    fields: { name: "input" },
+  },
+  {
+    name: "Get Groups (empty for all)",
+    endpoint: "/api/groups",
+    method: "GET",
+    fields: { name: "input" },
+  },
+  {
+    name: "Delete Group",
+    endpoint: "/api/groups/",
+    method: "DELETE",
+    fields: { name: "input" },
+  },
+  {
+    name: "Add Member",
+    endpoint: "/api/groups/members/:addTo",
+    method: "POST",
+    fields: { addTo: "input", member: "input" },
+  },
+  {
+    name: "Delete Member",
+    endpoint: "/api/groups/members/:deleteFrom",
+    method: "DELETE",
+    fields: { deleteFrom: "input", member: "input" },
   }
+
 ];
 
 // Do not edit below here.

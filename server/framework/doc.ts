@@ -12,6 +12,7 @@ import {
   ObjectId,
   OptionalUnlessRequiredId,
   ReplaceOptions,
+  UpdateFilter,
   UpdateResult,
   WithId,
   WithoutId,
@@ -113,6 +114,14 @@ export default class DocCollection<Schema extends BaseDoc> {
     this.sanitizeFilter(filter);
     update.dateUpdated = new Date();
     return await this.collection.updateOne(filter, { $set: update }, options);
+  }
+
+  /**
+   * Update the document that matches `filter` based on existing fields in `update`.
+   */
+  async updateOneGroup(filter: Filter<Schema>, update: UpdateFilter<Schema>, options?: FindOneAndUpdateOptions): Promise<UpdateResult<Schema>> {
+    this.sanitizeFilter(filter);
+    return await this.collection.updateOne(filter, update, options);
   }
 
   /**

@@ -2,7 +2,7 @@ import { ObjectId } from "mongodb";
 
 import { Router, getExpressRouter } from "./framework/router";
 
-import { Friend, Link, Note, Post, User, WebSession } from "./app";
+import { Friend, Group, Link, Note, Post, User, WebSession } from "./app";
 import { PostDoc, PostOptions } from "./concepts/post";
 import { UserDoc } from "./concepts/user";
 import { WebSessionDoc } from "./concepts/websession";
@@ -163,28 +163,36 @@ class Routes {
 
   // GROUPS
   @Router.post("/groups")
-  async createGroup(session: WebSessionDoc, name: string, admin: string) {
-    return
+  async createGroup(session: WebSessionDoc, name: string) {
+    const user = WebSession.getUser(session);
+    return await Group.create(user, name);
   }
 
   @Router.get("/groups")
-  async getGroups(session: WebSessionDoc) {
-    return
+  async getGroups(name?: string) {
+    let groups;
+    if (name) {
+      groups = await Group.getGroupByName(name)
+    } else {
+      groups = await Group.getGroups({});
+    }
+    return groups;
   }
 
   @Router.delete("/groups")
   async deleteGroup(session: WebSessionDoc, name: string) {
-    return
+    const toId = (await Group.getGroupByName(name))._id;
+    return Group.delete(toId);
   }
 
-  @Router.patch("/groups")
-  async addMember(session: WebSessionDoc, name: string, member: string) {
-    return
+  @Router.post("/groups/members/:addTo")
+  async addMember(session: WebSessionDoc, addTo: string, member: string) {
+    return await Group.addMember(addTo, member);
   }
 
-  @Router.delete("/groups")
-  async deleteMember(session: WebSessionDoc, name: string, member: string) {
-    return
+  @Router.delete("/groups/members/:deleteFrom")
+  async deleteMember(session: WebSessionDoc, deleteFrom: string, member: string) {
+    return await Group.deleteMember(deleteFrom, member);
   }
 }
 
