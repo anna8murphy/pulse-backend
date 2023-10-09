@@ -4,7 +4,6 @@ import { Group } from "../app";
 import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 
-
 export interface PostOptions {
   backgroundColor?: string;
 }
@@ -25,9 +24,24 @@ export default class PostConcept {
   }
 
   async publishTo(post: ObjectId, group: ObjectId){
-    await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
+    const posts = await this.posts.readMany({ 'groups': { $in: [group]} });
     const groupName = await Group.idsToGroupNames([group]);
+    if (posts) throw new PostAlreadyPublished(groupName);
+
+    await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
     return { msg: `Post published to ${groupName}!` };
+  }
+
+  async removeGroup(post: ObjectId, group: ObjectId){
+    const groups = await this.posts.readMany({ _id: post, 'groups': { $in: [group]} });
+    const allGroups = await this.posts.readMany({'groups': { $in: [group]} });
+    const groupName = await Group.idsToGroupNames([group]);
+
+    if (allGroups.length === 0) throw new NonexistentGroupError(groupName);
+    if (groups.length === 0) throw new PostNotPublished(groupName);
+
+    await this.posts.filterUpdateOne({ _id: post }, { $pull: { groups: group } });
+    return { msg: `Post removed from ${groupName}!` };
   }
   
   async getPosts(query: Filter<PostDoc>) {
@@ -79,5 +93,29 @@ export class PostAuthorNotMatchError extends NotAllowedError {
     public readonly _id: ObjectId,
   ) {
     super("{0} is not the author of post {1}!", author, _id);
+  }
+}
+
+export class PostAlreadyPublished extends NotAllowedError {
+  constructor(
+    public readonly groupName: string[],
+  ) {
+    super("Post is already published to {0}!", groupName[0]);
+  }
+}
+
+export class PostNotPublished extends NotAllowedError {
+  constructor(
+    public readonly groupName: string[],
+  ) {
+    super("Post is not published to {0}!", groupName[0]);
+  }
+}
+
+export class NonexistentGroupError extends NotAllowedError {
+  constructor(
+    public readonly groupName: string[],
+  ) {
+    super("A group with this name does not exist!", groupName[0]);
   }
 }

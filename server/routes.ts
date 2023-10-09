@@ -93,9 +93,13 @@ class Routes {
   }
 
   @Router.delete("/posts/:_id")
-  async deletePost(session: WebSessionDoc, _id: ObjectId) {
+  async deletePost(session: WebSessionDoc, _id: ObjectId, group: string) {
     const user = WebSession.getUser(session);
     await Post.isAuthor(user, _id);
+    if (group){
+      const groupId = await Group.getGroupByName(group)
+      return Post.removeGroup(_id, groupId._id);
+    }
     return Post.delete(_id);
   }
 
@@ -184,7 +188,6 @@ class Routes {
   async getGroups(session: WebSessionDoc, name?: string) {
     const user = WebSession.getUser(session);
     let groups;
-    let group;
     if (name) {
       groups = await Group.getGroups({ name: name, admin: user });
       return Responses.group(groups[0]);
@@ -194,8 +197,11 @@ class Routes {
     }
   }
 
-  @Router.patch("/groups/:changeTo")
+  @Router.patch("/groups")
   async editGroupName(session: WebSessionDoc, name: string, changeTo: string) {
+    const user = WebSession.getUser(session);
+    const group = await Group.getGroupByName(name);
+    await Group.isAdmin(user, group._id);
     return await Group.editGroupName(name, changeTo);
   }
 

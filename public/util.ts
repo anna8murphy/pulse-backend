@@ -78,10 +78,10 @@ const operations: operation[] = [
     fields: { id: "input", update: { content: "input", options: { backgroundColor: "input" } } },
   },
   {
-    name: "Delete Post",
+    name: "Delete Post (empty for all groups)",
     endpoint: "/api/posts/:id",
     method: "DELETE",
-    fields: { id: "input" },
+    fields: { id: "input", group: "input" },
   },
   {
     name: "Create Note",
@@ -139,7 +139,7 @@ const operations: operation[] = [
   },
   {
     name: "Edit Group Name",
-    endpoint: "/api/groups/:changeTo",
+    endpoint: "/api/groups",
     method: "PATCH",
     fields: { name: "input", changeTo: "input" },
   }

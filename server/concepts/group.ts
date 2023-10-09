@@ -1,6 +1,6 @@
 import { User } from "../app";
 import DocCollection, { BaseDoc } from "../framework/doc";
-import { NotAllowedError } from "./errors";
+import { NotAllowedError, NotFoundError } from "./errors";
 
 import { Filter, ObjectId } from "mongodb";
 
@@ -22,6 +22,17 @@ export default class GroupConcept {
   
     const _id = await this.groups.createOne({ admin, name, members });
     return { msg: "Group successfully created!", group: await this.groups.readOne({ _id }) };
+  }
+
+  async isAdmin(user: ObjectId, _id: ObjectId) {
+    const group = await this.groups.readOne({ _id });
+    if (!group) {
+      throw new NotFoundError(`Group ${_id} does not exist!`);
+    }
+    if (group.admin.toString() !== user.toString()) {
+      const groupName = await this.idsToGroupNames([group._id]);
+      throw new NonexistentGroupError(groupName[0]);
+    }
   }
 
   async getGroups(query: Filter<GroupDoc>){
@@ -46,9 +57,9 @@ export default class GroupConcept {
 
   async addMember(addTo: string, member: string){
     const group = await this.getGroupByName(addTo);
-    const memberId = await User.getUserByUsername(member);
-
     if (!group) throw new NonexistentGroupError(addTo);
+
+    const memberId = await User.getUserByUsername(member);
     if (group.members.some((memberObj) => memberObj.equals(memberId._id))) throw new DuplicateMemberError(member, addTo);
 
     await this.groups.filterUpdateOne({ _id: group._id }, { $push: { members: memberId._id } });    
@@ -57,9 +68,9 @@ export default class GroupConcept {
 
   async deleteMember(deleteFrom: string, member: string){
     const group = await this.getGroupByName(deleteFrom);
-    const memberId = await User.getUserByUsername(member);
-    
     if (!group) throw new NonexistentGroupError(deleteFrom);
+    
+    const memberId = await User.getUserByUsername(member);
     if (!group.members.some((memberIdObj) => memberIdObj.equals(memberId._id))) throw new NonexistentMemberError(member);
 
     await this.groups.filterUpdateOne( { _id: group._id }, { $pull: { members: memberId._id } });
@@ -67,19 +78,22 @@ export default class GroupConcept {
     }
 
   async editGroupName(name: string, changeTo: string){
+    if (!name || !changeTo) throw new GroupNameEmptyError();
+
     const group = await this.getGroupByName(name);
+    if (!group) throw new NonexistentGroupError(name);
+    
     await this.groups.updateOne( { _id: group._id }, { name: changeTo} );
-    return { msg: "Group name changed successfully!" };
+    return { msg: `Group name changed from '${name}' to '${changeTo}'!` };
   }
 
   async idsToGroupNames(ids: ObjectId[]) {
     const users = await this.groups.readMany({ _id: { $in: ids } });
 
-    // Store strings in Map because ObjectId comparison by reference is wrong
+    // store strings in Map because ObjectId comparison by reference is wrong
     const idToUser = new Map(users.map((user) => [user._id.toString(), user]));
     return ids.map((id) => idToUser.get(id.toString())?.name ?? "DELETED_GROUP");
   }
-  
 }
 
 export class PostAuthorNotMatchError extends NotAllowedError {
@@ -105,14 +119,6 @@ export class DuplicateGroupNameError extends NotAllowedError {
   }
 }
 
-export class NonexistentGroupError extends NotAllowedError {
-  constructor(
-    public readonly name: string,
-  ) {
-    super("A group named '{0}' does not exist!", name);
-  }
-}
-
 export class DuplicateMemberError extends NotAllowedError {
   constructor(
     public readonly member: string,
@@ -129,4 +135,13 @@ export class NonexistentMemberError extends NotAllowedError {
     super("A member named '{0}' does not exist!", member);
   }
 }
+
+export class NonexistentGroupError extends NotAllowedError {
+  constructor(
+    public readonly name: string,
+  ) {
+    super("A group named '{0}' does not exist!", name);
+  }
+}
+
 
