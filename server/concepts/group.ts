@@ -1,6 +1,6 @@
 import { User } from "../app";
 import DocCollection, { BaseDoc } from "../framework/doc";
-import { NotFoundError } from "./errors";
+import { NotAllowedError } from "./errors";
 
 import { Filter, ObjectId } from "mongodb";
 
@@ -10,67 +10,47 @@ export interface GroupDoc extends BaseDoc {
   members: Array<ObjectId>;
 }
 
-export interface MemberDoc extends BaseDoc {
-  user: string;
-}
-
 export default class GroupConcept {
   public readonly groups = new DocCollection<GroupDoc>("groups");
 
   async create(admin: ObjectId, name: string){
     const members = new Array<ObjectId>;
-
-    if (!name){
-      throw new Error("Group name must be non-empty!");
-    }
+    if (!name) throw new GroupNameEmptyError();
+    
     const group = await this.groups.readOne({ name });
-    if (group){
-      throw new Error("A group with this name already exists!");
-    }
-
+    if (group) throw new DuplicateGroupNameError(name);
+  
     const _id = await this.groups.createOne({ admin, name, members });
     return { msg: "Group successfully created!", group: await this.groups.readOne({ _id }) };
   }
 
   async getGroups(query: Filter<GroupDoc>){
-    const groups = await this.groups.readMany(query, {
-      sort: { dateUpdated: -1 },
-    });
-    const memberLst = await Promise.all(groups.map(async (group) => {const members = await this.getMembers(group); return members;}));
-    return { groups, memberLst };
+    const groups = await this.groups.readMany(query, { sort: { dateUpdated: -1 } });
+    return groups;
   }
 
   async getGroupByName(name: string) {
     const group = await this.groups.readOne({ name });
-    if (group === null) {
-      throw new NotFoundError(`Group not found!`);
-    }
+    if (group === null) throw new NonexistentGroupError(name);
     return group;
   }
 
   async delete(_id: ObjectId){
     const group = await this.groups.readOne({ _id });
-    if (!group){
-      throw new Error("A group with this name doesn't exist!");
-    }
+    if (!group) throw new NonexistentGroupError(_id.toString());
+  
     await this.groups.deleteOne({ _id });
     return { msg: "Group deleted successfully!" };
-  }
-
-  // map member IDs to usernames
-  async getMembers(group: GroupDoc){
-    const members = await Promise.all(group.members.map(async (memberId) => { const memberUsername = await User.getUserById(memberId); return memberUsername; }));
-    return members;
   }
 
   async addMember(addTo: string, member: string){
     const group = await this.getGroupByName(addTo);
     const memberId = await User.getUserByUsername(member);
 
-    if (!group) throw new NotFoundError("Group not found!");
-    if (group.members.some((memberObj) => memberObj.equals(memberId._id))) throw new Error("Member already exists in this group!");
+    if (!group) throw new NonexistentGroupError(addTo);
+    if (group.members.some((memberObj) => memberObj.equals(memberId._id))) throw new DuplicateMemberError(member, addTo);
 
-    await this.groups.updateOneGroup({ _id: group._id }, { $push: { members: memberId._id } });
+    await this.groups.filterUpdateOne({ _id: group._id }, { $push: { members: memberId._id } });    
     return { msg: "Member added successfully!" };
   }
 
@@ -78,11 +58,74 @@ export default class GroupConcept {
     const group = await this.getGroupByName(deleteFrom);
     const memberId = await User.getUserByUsername(member);
     
-    if (!group) throw new NotFoundError("Group not found!");
-    if (!group.members.some((memberIdObj) => memberIdObj.equals(memberId._id))) throw new Error("Member does not exist in this group!");
+    if (!group) throw new NonexistentGroupError(deleteFrom);
+    if (!group.members.some((memberIdObj) => memberIdObj.equals(memberId._id))) throw new NonexistentMemberError(member);
 
-    await this.groups.updateOneGroup( { _id: group._id }, { $pull: { members: memberId._id } });
+    await this.groups.filterUpdateOne( { _id: group._id }, { $pull: { members: memberId._id } });
     return { msg: "Member deleted successfully!" };
-      
     }
+
+  async editGroupName(name: string, changeTo: string){
+    const group = await this.getGroupByName(name);
+    await this.groups.updateOne( { _id: group._id }, { name: changeTo} );
+    return { msg: "Group name changed successfully!" };
+  }
+
+  async idsToGroupNames(ids: ObjectId[]) {
+    const users = await this.groups.readMany({ _id: { $in: ids } });
+
+    // Store strings in Map because ObjectId comparison by reference is wrong
+    const idToUser = new Map(users.map((user) => [user._id.toString(), user]));
+    return ids.map((id) => idToUser.get(id.toString())?.name ?? "DELETED_GROUP");
+  }
+  
 }
+
+export class PostAuthorNotMatchError extends NotAllowedError {
+  constructor(
+    public readonly author: ObjectId,
+    public readonly _id: ObjectId,
+  ) {
+    super("{0} is not the author of post {1}!", author, _id);
+  }
+}
+
+export class GroupNameEmptyError extends NotAllowedError {
+  constructor() {
+    super("Group name must be non-empty!");
+  }
+}
+
+export class DuplicateGroupNameError extends NotAllowedError {
+  constructor(
+    public readonly name: string,
+  ) {
+    super("A group named '{0}' already exists!", name);
+  }
+}
+
+export class NonexistentGroupError extends NotAllowedError {
+  constructor(
+    public readonly name: string,
+  ) {
+    super("A group named '{0}' does not exist!", name);
+  }
+}
+
+export class DuplicateMemberError extends NotAllowedError {
+  constructor(
+    public readonly member: string,
+    public readonly group: string
+  ) {
+    super("{0} is already in {1}!", member, group);
+  }
+}
+
+export class NonexistentMemberError extends NotAllowedError {
+  constructor(
+    public readonly member: string,
+  ) {
+    super("A member named '{0}' does not exist!", member);
+  }
+}
+

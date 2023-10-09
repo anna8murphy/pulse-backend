@@ -61,14 +61,14 @@ class Routes {
 
   // POSTS
   @Router.get("/posts")
-  async getPosts(author?: string) {
-    let posts;
-    if (author) {
-      const id = (await User.getUserByUsername(author))._id;
-      posts = await Post.getByAuthor(id);
-    } else {
-      posts = await Post.getPosts({});
-    }
+  async getPosts(session: WebSessionDoc, author?: string) {
+    // Find all groups that current user is a member of
+    const user = WebSession.getUser(session);
+    const userGroups = await Group.getGroups({ 'members': { $in: [user] } });
+    const groupIds = userGroups.map((group) => group._id);
+
+    // Find all posts that are associated with those groups
+    const posts = await Post.getPosts({ 'groups': { $in: groupIds } });
     return Responses.posts(posts);
   }
 
@@ -79,6 +79,12 @@ class Routes {
     return { msg: created.msg, post: await Responses.post(created.post) };
   }
 
+  @Router.patch("/posts/:publishTo")
+  async publishTo(post: ObjectId, publishTo: string) {
+    const group = await Group.getGroupByName(publishTo);
+    return await Post.publishTo(post, group._id);
+  }
+  
   @Router.patch("/posts/:_id")
   async updatePost(session: WebSessionDoc, _id: ObjectId, update: Partial<PostDoc>) {
     const user = WebSession.getUser(session);
@@ -161,6 +167,12 @@ class Routes {
     return await Link.create(user, url, displayText, postId);
   }
 
+  @Router.get("/links")
+  async getLinks(session: WebSessionDoc, postId: ObjectId) {
+    const user = WebSession.getUser(session);
+    return await Link.read(user, postId);
+  }
+
   // GROUPS
   @Router.post("/groups")
   async createGroup(session: WebSessionDoc, name: string) {
@@ -171,12 +183,19 @@ class Routes {
   @Router.get("/groups")
   async getGroups(name?: string) {
     let groups;
+    let group;
     if (name) {
-      groups = await Group.getGroupByName(name)
+      group = await Group.getGroupByName(name)
+      return Responses.group(group);
     } else {
       groups = await Group.getGroups({});
+      return Responses.groups(groups);
     }
-    return groups;
+  }
+
+  @Router.patch("/groups/:changeTo")
+  async editGroupName(session: WebSessionDoc, name: string, changeTo: string) {
+    return await Group.editGroupName(name, changeTo);
   }
 
   @Router.delete("/groups")

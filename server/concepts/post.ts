@@ -3,6 +3,7 @@ import { Filter, ObjectId } from "mongodb";
 import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
 
+
 export interface PostOptions {
   backgroundColor?: string;
 }
@@ -10,6 +11,7 @@ export interface PostOptions {
 export interface PostDoc extends BaseDoc {
   author: ObjectId;
   content: string;
+  groups: Array<ObjectId>; 
   options?: PostOptions;
 }
 
@@ -17,10 +19,15 @@ export default class PostConcept {
   public readonly posts = new DocCollection<PostDoc>("posts");
 
   async create(author: ObjectId, content: string, options?: PostOptions) {
-    const _id = await this.posts.createOne({ author, content, options });
+    const _id = await this.posts.createOne({ author, content, options, groups: [] });
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
+  async publishTo(post: ObjectId, group: ObjectId){
+    await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
+    return { msg: "Post successfully published!", post: await this.posts.readOne({ post }) };
+  }
+  
   async getPosts(query: Filter<PostDoc>) {
     const posts = await this.posts.readMany(query, {
       sort: { dateUpdated: -1 },

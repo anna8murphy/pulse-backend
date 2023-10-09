@@ -1,5 +1,6 @@
-import { User } from "./app";
+import { Group, User } from "./app";
 import { AlreadyFriendsError, FriendNotFoundError, FriendRequestAlreadyExistsError, FriendRequestDoc, FriendRequestNotFoundError } from "./concepts/friend";
+import { GroupDoc } from "./concepts/group";
 import { PostAuthorNotMatchError, PostDoc } from "./concepts/post";
 import { Router } from "./framework/router";
 
@@ -16,7 +17,8 @@ export default class Responses {
       return post;
     }
     const author = await User.getUserById(post.author);
-    return { ...post, author: author.username };
+    const groups = post.groups || [];
+    return { ...post, author: author.username};
   }
 
   /**
@@ -24,7 +26,11 @@ export default class Responses {
    */
   static async posts(posts: PostDoc[]) {
     const authors = await User.idsToUsernames(posts.map((post) => post.author));
-    return posts.map((post, i) => ({ ...post, author: authors[i] }));
+ 
+    const groups = await Promise.all(
+      posts.map(async (post) => { const groupIds = post.groups || []; const groupNames = await Group.idsToGroupNames(groupIds); return groupNames; }
+    ));
+    return posts.map((post, i) => ({...post, author: authors[i], groups: groups[i] }));
   }
 
   /**
@@ -36,6 +42,27 @@ export default class Responses {
     const to = requests.map((request) => request.to);
     const usernames = await User.idsToUsernames(from.concat(to));
     return requests.map((request, i) => ({ ...request, from: usernames[i], to: usernames[i + requests.length] }));
+  }
+
+  /**
+   * Convert GroupDoc into more readable format for the frontend by converting the creator and members id into a username.
+   */
+  static async group(group: GroupDoc | null) {
+    if (!group) {
+      return group;
+    }
+    const admin = await User.getUserById(group.admin);
+    const members = await User.idsToUsernames(group.members);
+    return { ...group, admin: admin.username, members: members };
+  }
+
+  /**
+   * Same as {@link group} but for an array of GroupDoc for improved performance.
+   */
+  static async groups(groups: GroupDoc[]) {
+    const admins = await User.idsToUsernames(groups.map((group) => group.admin));
+    const members = await Promise.all(groups.map(async (group) => await User.idsToUsernames(group.members)));
+    return groups.map((group, i) => ({ ...group, admin: admins[i], members: members[i] }));
   }
 }
 

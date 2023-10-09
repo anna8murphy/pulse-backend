@@ -119,7 +119,7 @@ export default class DocCollection<Schema extends BaseDoc> {
   /**
    * Update the document that matches `filter` based on existing fields in `update`.
    */
-  async updateOneGroup(filter: Filter<Schema>, update: UpdateFilter<Schema>, options?: FindOneAndUpdateOptions): Promise<UpdateResult<Schema>> {
+  async filterUpdateOne(filter: Filter<Schema>, update: UpdateFilter<Schema>, options?: FindOneAndUpdateOptions): Promise<UpdateResult<Schema>> {
     this.sanitizeFilter(filter);
     return await this.collection.updateOne(filter, update, options);
   }

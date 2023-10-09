@@ -66,6 +66,12 @@ const operations: operation[] = [
     fields: { content: "input" },
   },
   {
+    name: "Publish Post",
+    endpoint: "/api/posts/:publishTo",
+    method: "PATCH",
+    fields: { post: "input", publishTo: "input" },
+  },
+  {
     name: "Update Post",
     endpoint: "/api/posts/:id",
     method: "PATCH",
@@ -83,18 +89,24 @@ const operations: operation[] = [
     method: "POST",
     fields: { note: "input", postId: "input" },
   },
-  {
-    name: "Get Notes (empty for all)",
-    endpoint: "/api/notes",
-    method: "GET",
-    fields: { postID: "input" },
-  },
+  // {
+  //   name: "Get Notes (empty for all)",
+  //   endpoint: "/api/notes",
+  //   method: "GET",
+  //   fields: { postID: "input" },
+  // },
   {
     name: "Create Link",
     endpoint: "/api/links/",
     method: "POST",
     fields: { url: "input", displayText: "input", postId: "input" },
   },
+  // {
+  //   name: "Get Links (empty for all)",
+  //   endpoint: "/api/links/",
+  //   method: "GET",
+  //   fields: { postID: "input" },
+  // },
   {
     name: "Create Group",
     endpoint: "/api/groups/",
@@ -124,8 +136,13 @@ const operations: operation[] = [
     endpoint: "/api/groups/members/:deleteFrom",
     method: "DELETE",
     fields: { deleteFrom: "input", member: "input" },
+  },
+  {
+    name: "Edit Group Name",
+    endpoint: "/api/groups/:changeTo",
+    method: "PATCH",
+    fields: { name: "input", changeTo: "input" },
   }
-
 ];
 
 // Do not edit below here.

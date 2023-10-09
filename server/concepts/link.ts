@@ -19,15 +19,15 @@ export default class LinkConcept {
     }
 
     async read(creator: ObjectId, postId: ObjectId) {
-      const links = (await this.links.readMany( { creator, postId }));
+      const links = (await this.links.readMany( { creator }));
       return { msg: "Here are your links!", links: links };
     }
-  
+    
     async delete(_id: ObjectId) {
       await this.links.deleteOne({ _id });
       return { msg: "Link deleted successfully!" };
     }
-  
+    
     async isCreator(user: ObjectId, _id: ObjectId) {
       const link = await this.links.readOne({ _id });
       if (!link) {
