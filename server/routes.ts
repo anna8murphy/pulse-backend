@@ -181,14 +181,15 @@ class Routes {
   }
 
   @Router.get("/groups")
-  async getGroups(name?: string) {
+  async getGroups(session: WebSessionDoc, name?: string) {
+    const user = WebSession.getUser(session);
     let groups;
     let group;
     if (name) {
-      group = await Group.getGroupByName(name)
-      return Responses.group(group);
+      groups = await Group.getGroups({ name: name, admin: user });
+      return Responses.group(groups[0]);
     } else {
-      groups = await Group.getGroups({});
+      groups = await Group.getGroups({ admin: user });
       return Responses.groups(groups);
     }
   }

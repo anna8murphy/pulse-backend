@@ -1,4 +1,5 @@
 import { Filter, ObjectId } from "mongodb";
+import { Group } from "../app";
 
 import DocCollection, { BaseDoc } from "../framework/doc";
 import { NotAllowedError, NotFoundError } from "./errors";
@@ -25,7 +26,8 @@ export default class PostConcept {
 
   async publishTo(post: ObjectId, group: ObjectId){
     await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
-    return { msg: "Post successfully published!", post: await this.posts.readOne({ post }) };
+    const groupName = await Group.idsToGroupNames([group]);
+    return { msg: `Post published to ${groupName}!` };
   }
   
   async getPosts(query: Filter<PostDoc>) {

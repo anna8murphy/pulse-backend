@@ -14,7 +14,7 @@ export default class GroupConcept {
   public readonly groups = new DocCollection<GroupDoc>("groups");
 
   async create(admin: ObjectId, name: string){
-    const members = new Array<ObjectId>;
+    const members = [admin];
     if (!name) throw new GroupNameEmptyError();
     
     const group = await this.groups.readOne({ name });
@@ -25,6 +25,7 @@ export default class GroupConcept {
   }
 
   async getGroups(query: Filter<GroupDoc>){
+    // ADD ERROR HERE for if a group doesn't exist
     const groups = await this.groups.readMany(query, { sort: { dateUpdated: -1 } });
     return groups;
   }
