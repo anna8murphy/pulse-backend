@@ -35,6 +35,7 @@ class Routes {
 
   @Router.patch("/users")
   async updateUser(session: WebSessionDoc, update: Partial<UserDoc>) {
+
     const user = WebSession.getUser(session);
     return await User.update(user, update);
   }
@@ -62,27 +63,28 @@ class Routes {
   // POSTS
   @Router.get("/posts")
   async getPosts(session: WebSessionDoc, author?: string) {
-    // Find all groups that current user is a member of
     const user = WebSession.getUser(session);
     const userGroups = await Group.getGroups({ 'members': { $in: [user] } });
     const groupIds = userGroups.map((group) => group._id);
+    let posts;
 
-    // Find all posts that are associated with those groups
-    const posts = await Post.getPosts({ 'groups': { $in: groupIds } });
+    if (!author) posts = await Post.getPosts({ $or: [{ 'groups': { $in: groupIds } }, { 'author': user } ] });
+    else posts = await Post.getPosts({ 'groups': { $in: groupIds } });
     return Responses.posts(posts);
   }
 
   @Router.post("/posts")
-  async createPost(session: WebSessionDoc, content: string, options?: PostOptions) {
+  async createPost(session: WebSessionDoc, content: string, groups: string, options?: PostOptions) {
     const user = WebSession.getUser(session);
-    const created = await Post.create(user, content, options);
-    return { msg: created.msg, post: await Responses.post(created.post) };
+    const created = await Post.create(user, content, groups, options);
+    return { msg: created.msg };
   }
 
   @Router.patch("/posts/:publishTo")
-  async publishTo(post: ObjectId, publishTo: string) {
+  async publishTo(session: WebSessionDoc, post: ObjectId, publishTo: string) {
+    const admin = WebSession.getUser(session);
     const group = await Group.getGroupByName(publishTo);
-    return await Post.publishTo(post, group._id);
+    return await Post.publishTo(post, group._id, admin);
   }
   
   @Router.patch("/posts/:_id")
@@ -166,9 +168,11 @@ class Routes {
 
   // LINKS
   @Router.post("/links")
-  async createLink(session: WebSessionDoc, url: string, displayText: string, postId: ObjectId) {
+  async createLink(session: WebSessionDoc, url: string, displayText: string, postId: ObjectId, paywall: string) {
     const user = WebSession.getUser(session);
-    return await Link.create(user, url, displayText, postId);
+    let paywallBool = false;
+    if (paywall == "Y") paywallBool = true;
+    return await Link.create(user, url, displayText, postId, paywallBool);
   }
 
   @Router.get("/links")

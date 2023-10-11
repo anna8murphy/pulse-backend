@@ -18,15 +18,29 @@ export interface PostDoc extends BaseDoc {
 export default class PostConcept {
   public readonly posts = new DocCollection<PostDoc>("posts");
 
-  async create(author: ObjectId, content: string, options?: PostOptions) {
-    const _id = await this.posts.createOne({ author, content, options, groups: [] });
+  async create(author: ObjectId, content: string, group: string, options?: PostOptions) {
+    let addTo: ObjectId[];
+    if (!group) { // add to all groups
+      const groups = Group.getGroups({'admin': author});
+      addTo = (await groups).map((group) => group._id);
+    } 
+    else {
+      const groupObj = await Group.getGroupByName(group, author);
+      if (!groupObj) throw new NonexistentGroupError([group]);
+      addTo = [groupObj._id];
+    }
+    const _id = await this.posts.createOne({ author, content, options, groups: addTo });
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
-  async publishTo(post: ObjectId, group: ObjectId){
-    const posts = await this.posts.readMany({ 'groups': { $in: [group]} });
+  async publishTo(admin: ObjectId, post: ObjectId, group: ObjectId){
     const groupName = await Group.idsToGroupNames([group]);
-    if (posts) throw new PostAlreadyPublished(groupName);
+
+    const allPosts = await this.posts.readMany( {_id: post} );
+    if (allPosts.length === 0) throw new NonexistentPostError();
+
+    const groupedPosts = await this.posts.readMany( { $and: [{ groups: { $in: [group]} }, {_id: post} ] });
+    if (groupedPosts.length !== 0) throw new PostAlreadyPublished(groupName);
 
     await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
     return { msg: `Post published to ${groupName}!` };
@@ -117,5 +131,12 @@ export class NonexistentGroupError extends NotAllowedError {
     public readonly groupName: string[],
   ) {
     super("A group with this name does not exist!", groupName[0]);
+  }
+}
+
+export class NonexistentPostError extends NotAllowedError {
+  constructor(
+  ) {
+    super("A post with this ID does not exist!");
   }
 }

@@ -42,7 +42,7 @@ const operations: operation[] = [
     fields: { update: { username: "input", password: "input" } },
   },
   {
-    name: "Delete User",
+    name: "Delete Current User",
     endpoint: "/api/users",
     method: "DELETE",
     fields: {},
@@ -60,13 +60,13 @@ const operations: operation[] = [
     fields: { author: "input" },
   },
   {
-    name: "Create Post",
+    name: "Create Post (groups empty to publish to all)",
     endpoint: "/api/posts",
     method: "POST",
-    fields: { content: "input" },
+    fields: { content: "input", groups: "input" },
   },
   {
-    name: "Publish Post",
+    name: "Publish Post to Group",
     endpoint: "/api/posts/:publishTo",
     method: "PATCH",
     fields: { post: "input", publishTo: "input" },
@@ -96,10 +96,10 @@ const operations: operation[] = [
   //   fields: { postID: "input" },
   // },
   {
-    name: "Create Link",
+    name: "Create Link (Y/N for paywall)",
     endpoint: "/api/links/",
     method: "POST",
-    fields: { url: "input", displayText: "input", postId: "input" },
+    fields: { url: "input", displayText: "input", postId: "input", paywall: "input" },
   },
   // {
   //   name: "Get Links (empty for all)",
@@ -114,7 +114,7 @@ const operations: operation[] = [
     fields: { name: "input" },
   },
   {
-    name: "Get Groups (empty for all)",
+    name: "Get Group Info (empty for all)",
     endpoint: "/api/groups",
     method: "GET",
     fields: { name: "input" },

@@ -8,13 +8,14 @@ export interface LinkDoc extends BaseDoc {
   displayText: string;
   creator: ObjectId;
   postId: ObjectId;
+  paywall?: Boolean;
 }
 
 export default class LinkConcept {
   public readonly links = new DocCollection<LinkDoc>("links");
   
-    async create(creator: ObjectId, url: string, displayText: string,  postId: ObjectId) {
-      const _id = await this.links.createOne({ creator, url, displayText, postId });
+    async create(creator: ObjectId, url: string, displayText: string,  postId: ObjectId, paywall: Boolean) {
+      const _id = await this.links.createOne({ creator, url, displayText, postId, paywall });
       return { msg: "Link successfully created!", label: await this.links.readOne({ _id }) };
     }
 

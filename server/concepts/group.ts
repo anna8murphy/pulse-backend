@@ -36,14 +36,14 @@ export default class GroupConcept {
   }
 
   async getGroups(query: Filter<GroupDoc>){
-    // ADD ERROR HERE for if a group doesn't exist
     const groups = await this.groups.readMany(query, { sort: { dateUpdated: -1 } });
     return groups;
   }
 
-  async getGroupByName(name: string) {
+  async getGroupByName(name: string, admin?: ObjectId) {
     const group = await this.groups.readOne({ name });
     if (group === null) throw new NonexistentGroupError(name);
+    if (admin) await this.isAdmin(admin, group._id);
     return group;
   }
 
@@ -88,11 +88,11 @@ export default class GroupConcept {
   }
 
   async idsToGroupNames(ids: ObjectId[]) {
-    const users = await this.groups.readMany({ _id: { $in: ids } });
+    const groups = await this.groups.readMany({ _id: { $in: ids } });
 
     // store strings in Map because ObjectId comparison by reference is wrong
-    const idToUser = new Map(users.map((user) => [user._id.toString(), user]));
-    return ids.map((id) => idToUser.get(id.toString())?.name ?? "DELETED_GROUP");
+    const idToGroup = new Map(groups.map((group) => [group._id.toString(), group]));
+    return ids.map((id) => idToGroup.get(id.toString())?.name ?? "DELETED_GROUP");
   }
 }
 
