@@ -39,8 +39,8 @@ export default class PostConcept {
     const allPosts = await this.posts.readMany( {_id: post} );
     if (allPosts.length === 0) throw new NonexistentPostError();
 
-    const groupedPosts = await this.posts.readMany( { $and: [{ groups: { $in: [group]} }, {_id: post} ] });
-    if (groupedPosts.length !== 0) throw new PostAlreadyPublished(groupName);
+    const groupedPosts = await this.posts.readMany( { groups: {$in: [group]}, _id: post} );
+    if (groupedPosts.length > 0) throw new PostAlreadyPublished(groupName);
 
     await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
     return { msg: `Post published to ${groupName}!` };
@@ -63,6 +63,11 @@ export default class PostConcept {
       sort: { dateUpdated: -1 },
     });
     return posts;
+  }
+
+  async checkPostExists(post: ObjectId){
+    const allPosts = await this.posts.readMany( {_id: post} );
+    if (allPosts.length === 0) throw new NonexistentPostError();
   }
 
   async getByAuthor(author: ObjectId) {
