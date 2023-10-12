@@ -1,4 +1,4 @@
-import { Group, User } from "./app";
+import { Group, Link, User } from "./app";
 import { AlreadyFriendsError, FriendNotFoundError, FriendRequestAlreadyExistsError, FriendRequestDoc, FriendRequestNotFoundError } from "./concepts/friend";
 import { GroupDoc } from "./concepts/group";
 import { PostAuthorNotMatchError, PostDoc } from "./concepts/post";
@@ -17,7 +17,6 @@ export default class Responses {
       return post;
     }
     const author = await User.getUserById(post.author);
-    const groups = post.groups || [];
     return { ...post, author: author.username};
   }
 
@@ -25,12 +24,27 @@ export default class Responses {
    * Same as {@link post} but for an array of PostDoc for improved performance.
    */
   static async posts(posts: PostDoc[]) {
-    const authors = await User.idsToUsernames(posts.map((post) => post.author));
- 
-    const groups = await Promise.all(
-      posts.map(async (post) => { const groupIds = post.groups || []; const groupNames = await Group.idsToGroupNames(groupIds); return groupNames; }
-    ));
-    return posts.map((post, i) => ({...post, author: authors[i], groups: groups[i] }));
+    const authorIds = posts.map((post) => post.author);
+    const authors = await User.idsToUsernames(authorIds);
+
+    const groupNamesPromises = posts.map(async (post) => {
+      const groupIds = post.groups || [];
+      const groupNames = await Group.idsToGroupNames(groupIds);
+      return groupNames;
+    });
+    const groups = await Promise.all(groupNamesPromises);
+
+    const linksPromises = posts.map((post) => Link.getByTarget(post._id));
+    const links = await Promise.all(linksPromises);
+
+    const postsWithLinks = posts.map((post, i) => ({
+      ...post,
+      link: links[i],
+      author: authors[i],
+      groups: groups[i]
+    }));
+
+    return postsWithLinks;
   }
 
   /**

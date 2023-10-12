@@ -63,7 +63,7 @@ const operations: operation[] = [
     name: "Create Post (groups empty to publish to all)",
     endpoint: "/api/posts",
     method: "POST",
-    fields: { content: "input", groups: "input" },
+    fields: { content: "input", url: "input", displayUrlAs: "input", paywall: "input", groups: "input" },
   },
   {
     name: "Publish Post to Group",
@@ -96,34 +96,16 @@ const operations: operation[] = [
     fields: { id: "input", update: { note: "input" } },
   },
   {
-    name: "Get Notes (empty for all)",
-    endpoint: "/api/notes",
-    method: "GET",
-    fields: { post: "input" },
-  },
-  {
     name: "Delete Note",
     endpoint: "/api/notes/",
     method: "DELETE",
     fields: { noteId: "input" },
   },
   {
-    name: "Create Link (Y/N for paywall)",
-    endpoint: "/api/links/",
-    method: "POST",
-    fields: { url: "input", displayText: "input", postId: "input", paywall: "input" },
-  },
-  {
     name: "Get Links (empty for all)",
     endpoint: "/api/links/",
     method: "GET",
     fields: { post: "input" },
-  },
-  {
-    name: "Delete Link",
-    endpoint: "/api/links/",
-    method: "DELETE",
-    fields: { linkId: "input" },
   },
   {
     name: "Create Group",

@@ -35,7 +35,6 @@ class Routes {
 
   @Router.patch("/users")
   async updateUser(session: WebSessionDoc, update: Partial<UserDoc>) {
-
     const user = WebSession.getUser(session);
     return await User.update(user, update);
   }
@@ -66,26 +65,38 @@ class Routes {
     const user = WebSession.getUser(session);
     const userGroups = await Group.getGroups({ 'members': { $in: [user] } });
     const groupIds = userGroups.map((group) => group._id);
-    let posts;
 
-    if (!author) posts = await Post.getPosts({ $or: [{ 'groups': { $in: groupIds } }, { 'author': user } ] });
-    else posts = await Post.getPosts({ 'groups': { $in: groupIds } });
+    let authorId;
+    if (author) authorId = (await User.getUserByUsername(author))._id;
+    
+    let posts;
+    if (author) posts = await Post.getPosts({ $and: [{ 'groups': { $in: groupIds } }, { 'author': authorId } ] });
+    else posts = await Post.getPosts({ $or: [{ 'groups': { $in: groupIds } }, { 'author': user } ] });
+
+    // const links = Link.links.map(link => Link.getByTarget(user)); // get all links here
     return Responses.posts(posts);
   }
 
   @Router.post("/posts")
-  async createPost(session: WebSessionDoc, content: string, groups: string, options?: PostOptions) {
+  async createPost(session: WebSessionDoc, content: string, url: string, displayUrlAs: string, paywall: string, groups: string, options?: PostOptions) {
     const user = WebSession.getUser(session);
     const created = await Post.create(user, content, groups, options);
+    const postId = ((created!).post!)._id;
+
+    // link
+    let paywallBool = false;
+    if (paywall == "Y") paywallBool = true;
+    await Link.create(user, url, displayUrlAs, postId, paywallBool);
+
     return { msg: created.msg };
   }
 
   @Router.patch("/posts/:publishTo")
   async publishTo(session: WebSessionDoc, post: ObjectId, publishTo: string) {
     const admin = WebSession.getUser(session);
-    const group = await Group.getGroupByName(publishTo);
-    await Group.isAdmin(admin, group._id);
-    return await Post.publishTo(admin, post, group._id);
+    const groupId = (await Group.getGroupByName(publishTo))._id;
+    await Group.isAdmin(admin, groupId);
+    return await Post.publishTo(admin, post, groupId);
   }
   
   @Router.patch("/posts/:_id")
@@ -100,10 +111,11 @@ class Routes {
     const user = WebSession.getUser(session);
     await Post.isAuthor(user, _id);
     if (group){
-      const groupId = await Group.getGroupByName(group)
-      await Group.isAdmin(user, groupId._id);
-      return Post.removeGroup(_id, groupId._id);
+      const groupId = (await Group.getGroupByName(group))._id;
+      await Group.isAdmin(user, groupId);
+      return Post.removeGroup(_id, groupId);
     }
+    // delete from all groups
     await Link.deleteByTarget(_id);
     await Note.deleteByTarget(_id);
     return Post.delete(_id);
@@ -158,54 +170,42 @@ class Routes {
   }
 
   // NOTES
-  @Router.get("/notes")
-  async getNotes(post: ObjectId) {
-    if (!post) return await Note.notes.readMany({}, {
-      sort: { dateUpdated: -1 },
-    });
-    return await Note.getByTarget(post);
-  }
-
   @Router.post("/notes")
   async createNote(session: WebSessionDoc, note: string, targetPost: ObjectId) {
     const author = WebSession.getUser(session);
+    await Post.isAuthor(author, targetPost); // only post author can add a note
+    await Post.checkPostExists(targetPost);
     return await Note.create(author, note, targetPost);
   }
 
   @Router.delete("/notes")
   async deleteNote(session: WebSessionDoc, noteId: ObjectId) {
+    const author = WebSession.getUser(session);
+    await Note.isAuthor(author, noteId);
     return await Note.delete(noteId);
   }
 
   @Router.patch("/notes/:_id")
   async updateNote(session: WebSessionDoc, _id: ObjectId, update: Partial<PostDoc>) {
-    const user = WebSession.getUser(session);
+    const author = WebSession.getUser(session);
+    await Note.isAuthor(author, _id);
     return await Note.update(_id, update);
   }
 
   // LINKS
-  @Router.post("/links")
-  async createLink(session: WebSessionDoc, url: string, displayText: string, postId: ObjectId, paywall: string) {
-    const user = WebSession.getUser(session);
-    await Post.checkPostExists(postId);
-    let paywallBool = false;
-    if (paywall == "Y") paywallBool = true;
-    return await Link.create(user, url, displayText, postId, paywallBool);
-  }
-
   @Router.get("/links")
-  async getLinks(post: ObjectId) {
-    if (!post) return await Link.links.readMany({}, {
-      sort: { dateUpdated: -1 },
-    });
-    return await Link.getByTarget(post);
-  }
-
-  @Router.delete("/links/")
-  async deleteLink(session: WebSessionDoc, linkId: ObjectId) {
+  async getLinks(session: WebSessionDoc, post: ObjectId) {
     const user = WebSession.getUser(session);
-    // await Link.isAuthor(user, linkId);
-    return await Link.delete(linkId);
+    const userGroups = await Group.getGroups({ 'members': { $in: [user] } });
+    const groupIds = userGroups.map(group => group._id);
+    const posts = await Post.getPosts({
+      $or: [
+        { 'groups': { $in: groupIds } },
+        { 'author': user }
+      ]
+    });
+    const links = await Promise.all(posts.map(post => Link.getByTarget(post._id)));
+    return links;
   }
 
   // GROUPS

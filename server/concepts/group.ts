@@ -31,7 +31,7 @@ export default class GroupConcept {
     }
     if (group.admin.toString() !== user.toString()) {
       const groupName = await this.idsToGroupNames([group._id]);
-      throw new NonexistentGroupError(groupName[0]);
+      throw new NonexistentGroupError(groupName[0]!);
     }
   }
 
@@ -89,10 +89,11 @@ export default class GroupConcept {
 
   async idsToGroupNames(ids: ObjectId[]) {
     const groups = await this.groups.readMany({ _id: { $in: ids } });
-
-    // store strings in Map because ObjectId comparison by reference is wrong
     const idToGroup = new Map(groups.map((group) => [group._id.toString(), group]));
-    return ids.map((id) => idToGroup.get(id.toString())?.name ?? "DELETED_GROUP");
+    const groupNames = ids
+      .filter((id) => idToGroup.has(id.toString()))
+      .map((id) => idToGroup.get(id.toString())?.name);
+    return groupNames;
   }
 }
 

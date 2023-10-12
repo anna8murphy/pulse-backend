@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 
 import DocCollection, { BaseDoc } from "../framework/doc";
-import { NotAllowedError, NotFoundError } from "./errors";
+import { NotAllowedError } from "./errors";
 
 export interface NoteDoc extends BaseDoc {
   note: string;
@@ -42,13 +42,17 @@ export default class NoteConcept {
 
     async update(_id: ObjectId, update: Partial<NoteDoc>) {
       await this.notes.updateOne({ _id }, update);
+      const note = await this.notes.readOne({ _id });
+      if (!note) {
+        throw new NonexistNoteError();
+      }
       return { msg: "Note successfully updated!" };
     }
   
     async isAuthor(user: ObjectId, _id: ObjectId) {
       const note = await this.notes.readOne({ _id });
       if (!note) {
-        throw new NotFoundError(`Label ${_id} does not exist!`);
+        throw new NonexistNoteError();
       }
       if (note.author.toString() !== user.toString()) {
         throw new NoteAuthorNotMatchError(user, _id);
@@ -68,6 +72,13 @@ export default class NoteConcept {
   export class DuplicateNoteError extends NotAllowedError {
     constructor() {
       super("A note on this post already exists!");
+    }
+  }
+
+  export class NonexistNoteError extends NotAllowedError {
+    constructor(
+    ) {
+      super("A note with this ID does not exist!");
     }
   }
 

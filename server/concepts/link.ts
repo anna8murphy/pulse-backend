@@ -8,6 +8,7 @@ export interface LinkDoc extends BaseDoc {
   displayText: string;
   author: ObjectId;
   target: ObjectId;
+  groups: Array<ObjectId>;
   paywall?: Boolean;
 }
 
@@ -20,13 +21,13 @@ export default class LinkConcept {
     }
 
     async getByAuthor(author: ObjectId) { 
-      const links = (await this.links.readMany( { author }));
-      return { msg: "Here are your links!", links: links };
+      const link = (await this.links.readMany( { author }));
+      return { link };
     }
 
     async getByTarget(target: ObjectId) {
-      const links = (await this.links.readMany( { target }));
-      return { msg: "Here are your links!", links: links };
+      const link = (await this.links.readOne( { target }));
+      return { link };
     }
     
     async delete(linkId: ObjectId) {

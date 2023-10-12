@@ -26,7 +26,7 @@ export default class PostConcept {
     } 
     else {
       const groupObj = await Group.getGroupByName(group, author);
-      if (!groupObj) throw new NonexistentGroupError([group]);
+      if (!groupObj) throw new NonexistentGroupError();
       addTo = [groupObj._id];
     }
     const _id = await this.posts.createOne({ author, content, options, groups: addTo });
@@ -40,7 +40,7 @@ export default class PostConcept {
     if (allPosts.length === 0) throw new NonexistentPostError();
 
     const groupedPosts = await this.posts.readMany( { groups: {$in: [group]}, _id: post} );
-    if (groupedPosts.length > 0) throw new PostAlreadyPublished(groupName);
+    if (groupedPosts.length > 0) throw new PostAlreadyPublished();
 
     await this.posts.filterUpdateOne({ _id: post }, { $push: { groups: group } });
     return { msg: `Post published to ${groupName}!` };
@@ -51,8 +51,8 @@ export default class PostConcept {
     const allGroups = await this.posts.readMany({'groups': { $in: [group]} });
     const groupName = await Group.idsToGroupNames([group]);
 
-    if (allGroups.length === 0) throw new NonexistentGroupError(groupName);
-    if (groups.length === 0) throw new PostNotPublished(groupName);
+    if (allGroups.length === 0) throw new NonexistentGroupError();
+    if (groups.length === 0) throw new PostNotPublished();
 
     await this.posts.filterUpdateOne({ _id: post }, { $pull: { groups: group } });
     return { msg: `Post removed from ${groupName}!` };
@@ -117,25 +117,22 @@ export class PostAuthorNotMatchError extends NotAllowedError {
 
 export class PostAlreadyPublished extends NotAllowedError {
   constructor(
-    public readonly groupName: string[],
   ) {
-    super("Post is already published to {0}!", groupName[0]);
+    super("Post is already published to this group!");
   }
 }
 
 export class PostNotPublished extends NotAllowedError {
   constructor(
-    public readonly groupName: string[],
   ) {
-    super("Post is not published to {0}!", groupName[0]);
+    super("Post is not published to this group!");
   }
 }
 
 export class NonexistentGroupError extends NotAllowedError {
   constructor(
-    public readonly groupName: string[],
   ) {
-    super("A group with this name does not exist!", groupName[0]);
+    super("A group with this name does not exist!");
   }
 }
 
