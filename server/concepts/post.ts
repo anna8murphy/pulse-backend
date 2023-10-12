@@ -33,7 +33,7 @@ export default class PostConcept {
     return { msg: "Post successfully created!", post: await this.posts.readOne({ _id }) };
   }
 
-  async publishTo(admin: ObjectId, post: ObjectId, group: ObjectId){
+  async publishTo(post: ObjectId, group: ObjectId){
     const groupName = await Group.idsToGroupNames([group]);
 
     const allPosts = await this.posts.readMany( {_id: post} );
@@ -65,15 +65,6 @@ export default class PostConcept {
     return posts;
   }
 
-  async checkPostExists(post: ObjectId){
-    const allPosts = await this.posts.readMany( {_id: post} );
-    if (allPosts.length === 0) throw new NonexistentPostError();
-  }
-
-  async getByAuthor(author: ObjectId) {
-    return await this.getPosts({ author });
-  }
-
   async update(_id: ObjectId, update: Partial<PostDoc>) {
     this.sanitizeUpdate(update);
     await this.posts.updateOne({ _id }, update);
@@ -93,6 +84,11 @@ export default class PostConcept {
     if (post.author.toString() !== user.toString()) {
       throw new PostAuthorNotMatchError(user, _id);
     }
+  }
+
+  async checkPostExists(post: ObjectId){
+    const allPosts = await this.posts.readMany( {_id: post} );
+    if (allPosts.length === 0) throw new NonexistentPostError();
   }
 
   private sanitizeUpdate(update: Partial<PostDoc>) {

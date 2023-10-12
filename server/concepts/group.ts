@@ -24,7 +24,8 @@ export default class GroupConcept {
     return { msg: "Group successfully created!", group: await this.groups.readOne({ _id }) };
   }
 
-  async isAdmin(user: ObjectId, _id: ObjectId) {
+  async isAdmin(user: ObjectId, groupName: string) {
+    const _id = (await this.getGroupByName(groupName))._id;
     const group = await this.groups.readOne({ _id });
     if (!group) {
       throw new NotFoundError(`Group ${_id} does not exist!`);
@@ -43,7 +44,7 @@ export default class GroupConcept {
   async getGroupByName(name: string, admin?: ObjectId) {
     const group = await this.groups.readOne({ name });
     if (group === null) throw new NonexistentGroupError(name);
-    if (admin) await this.isAdmin(admin, group._id);
+    if (admin) await this.isAdmin(admin, name);
     return group;
   }
 
